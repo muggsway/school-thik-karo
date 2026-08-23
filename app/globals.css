@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4ebd7;
+  --paper-dim: #ebe0c6;
+  --ink: #1a1108;
+  --ink-soft: #5b4f3e;
+  --line: #cdbf9d;
+  --rust: #b84915;
+  --rust-soft: #f3ddc9;
+  --brick: #8b1a1a;
+  --brick-soft: #f0dad4;
+  --moss: #1f5a2e;
+  --moss-soft: #dfe9dd;
+  --gold: #c9a227;
+  --gold-soft: #f2e9cd;
+
+  --font-display: "Bowlby One", Impact, sans-serif;
+  --font-body: "Inter", -apple-system, sans-serif;
+  --font-accent: Georgia, "Iowan Old Style", serif;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow: hidden;
+}
