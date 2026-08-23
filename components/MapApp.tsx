@@ -251,7 +251,7 @@ export default function MapApp({
 
       {/* case drawer */}
       <div
-        className="fixed top-0 right-0 h-full w-full sm:w-[380px] sm:max-w-[90vw] bg-white z-20 shadow-2xl transition-transform"
+        className="fixed top-0 right-0 h-full w-full sm:w-[440px] sm:max-w-[90vw] bg-white z-20 shadow-2xl transition-transform"
         style={{ transform: selected ? "translateX(0)" : "translateX(100%)" }}
       >
         {selected && (
@@ -291,14 +291,14 @@ export default function MapApp({
                 {selected.village_name && `${selected.subdistrict_name} · `}{selected.district_name}, {selected.state_name}
               </p>
             </div>
-            <div className="p-5 border-b" style={{ borderColor: "var(--line)" }}>
-              <h4 className="text-[10px] font-mono uppercase tracking-wide mb-2" style={{ color: "var(--ink-soft)" }}>
+            <div className="pt-5 pb-5 px-2 border-b" style={{ borderColor: "var(--line)" }}>
+              <h4 className="text-[10px] font-mono uppercase tracking-wide mb-2 px-3" style={{ color: "var(--ink-soft)" }}>
                 Source
               </h4>
               {selected.instagram_url ? (
                 <InstagramEmbed url={selected.instagram_url} />
               ) : (
-                <p className="text-sm" style={{ color: "var(--ink-soft)" }}>No link provided.</p>
+                <p className="text-sm px-3" style={{ color: "var(--ink-soft)" }}>No link provided.</p>
               )}
             </div>
             {selected.notes && (
@@ -310,23 +310,16 @@ export default function MapApp({
               </div>
             )}
             <div className="p-5">
-              <h4 className="text-[10px] font-mono uppercase tracking-wide mb-2" style={{ color: "var(--ink-soft)" }}>
+              <h4 className="text-[10px] font-mono uppercase tracking-wide mb-3" style={{ color: "var(--ink-soft)" }}>
                 Timeline
               </h4>
-              <div className="text-sm flex gap-2">
-                <span className="font-mono text-xs" style={{ color: "var(--ink-soft)" }}>
-                  {new Date(selected.posted_at ?? selected.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-                <span>{selected.posted_at ? "Posted on Instagram" : "Added to this map"}</span>
+              <div className="space-y-3">
+                <TimelineEntry
+                  date={selected.posted_at ?? selected.created_at}
+                  label={selected.posted_at ? "Posted on Instagram" : "Added to this map"}
+                />
+                {selected.posted_at && <TimelineEntry date={selected.created_at} label="Added to this map" />}
               </div>
-              {selected.posted_at && (
-                <div className="text-sm flex gap-2 mt-1.5">
-                  <span className="font-mono text-xs" style={{ color: "var(--ink-soft)" }}>
-                    {new Date(selected.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
-                  <span>Added to this map</span>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -366,6 +359,20 @@ export default function MapApp({
         states={states}
         onCreated={handleCreated}
       />
+    </div>
+  );
+}
+
+function TimelineEntry({ date, label }: { date: string; label: string }) {
+  return (
+    <div className="flex gap-3">
+      <div className="w-1.5 h-1.5 rounded-full mt-[7px] shrink-0" style={{ background: "var(--ink-soft)" }} />
+      <div>
+        <div className="text-sm">{label}</div>
+        <div className="text-xs font-mono mt-0.5" style={{ color: "var(--ink-soft)" }}>
+          {new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+        </div>
+      </div>
     </div>
   );
 }
