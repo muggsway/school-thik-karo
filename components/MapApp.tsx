@@ -51,9 +51,9 @@ function PinMarker({
   selected: boolean;
   onClick: (e: React.MouseEvent) => void;
 }) {
-  const s = selected ? 0.62 : 0.48;
+  const s = selected ? 0.68 : 0.52;
   const tx = x - 12 * s;
-  const ty = y - 22 * s;
+  const ty = y - 23 * s;
   return (
     <g
       onClick={onClick}
@@ -61,13 +61,17 @@ function PinMarker({
       style={{ transition: "transform 120ms" }}
       transform={`translate(${tx} ${ty}) scale(${s})`}
     >
-      <path
-        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
-        fill={color}
-        stroke="var(--ink)"
-        strokeWidth={selected ? 1.1 : 0.7}
-      />
-      <circle cx="12" cy="9" r="3" fill="white" />
+      <g transform="rotate(22 12 23)">
+        {/* needle */}
+        <polygon points="12,23 9.3,15 14.7,15" fill="#C7C7C7" stroke="#8A8A8A" strokeWidth={0.4} />
+        <line x1="11.2" y1="20.5" x2="12.9" y2="16" stroke="white" strokeOpacity={0.7} strokeWidth={0.5} />
+        {/* head shadow where needle meets head */}
+        <ellipse cx="12" cy="14.6" rx="4.1" ry="1.6" fill="rgba(0,0,0,0.22)" />
+        {/* head */}
+        <ellipse cx="12" cy="9" rx="7.2" ry="6.4" fill={color} stroke="var(--ink)" strokeWidth={selected ? 0.9 : 0.6} />
+        {/* glossy highlight */}
+        <ellipse cx="9.2" cy="6" rx="2.3" ry="1.6" fill="white" opacity={0.5} transform="rotate(-20 9.2 6)" />
+      </g>
     </g>
   );
 }
