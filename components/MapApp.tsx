@@ -282,7 +282,7 @@ export default function MapApp({
                 className="text-xl mt-3"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                {selected.village_name ? cleanVillageName(selected.village_name) : `${selected.subdistrict_name} (tehsil level)`}
+                {selected.village_name ? cleanVillageName(selected.village_name) : selected.subdistrict_name}
               </h2>
               {selected.school_name && (
                 <p className="text-sm mt-0.5">{selected.school_name}</p>

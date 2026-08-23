@@ -160,7 +160,7 @@ export default function VillagePicker({
       >
         <div>
           <div className="font-medium">
-            📍 {value.villageName ? cleanVillageName(value.villageName) : `${value.subdistrictName} (tehsil level)`}
+            📍 {value.villageName ? cleanVillageName(value.villageName) : value.subdistrictName}
           </div>
           <div className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
             {value.villageName && `${value.subdistrictName} · `}{value.districtName}, {value.stateName}
