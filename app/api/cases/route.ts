@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
-import { placeInState } from "@/lib/statemap";
+import { placeLocation } from "@/lib/statemap";
 
 export async function GET() {
   const { rows } = await pool.query(`
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const { x, y } = placeInState(Number(stateCode), String(villageCode));
+  const { x, y } = placeLocation(Number(stateCode), Number(subdistrictCode), String(villageCode));
 
   const { rows } = await pool.query(
     `INSERT INTO cases

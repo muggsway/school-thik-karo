@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import indiaMap from "@svg-maps/india";
 import stateMapData from "@/data/state-map.json";
 import SubmitModal from "@/components/SubmitModal";
+import InstagramEmbed from "@/components/InstagramEmbed";
 
 export type CaseRow = {
   id: number;
@@ -118,11 +119,11 @@ export default function MapApp({
       {/* wordmark seal */}
       <button
         onClick={() => setAboutOpen(true)}
-        className="fixed top-4 left-4 z-10 w-14 h-14 rounded-full bg-white border-2 flex items-center justify-center text-center leading-tight shadow-lg -rotate-6 cursor-pointer"
+        className="fixed top-3 left-3 sm:top-4 sm:left-4 z-10 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white border-2 flex items-center justify-center text-center leading-tight shadow-lg -rotate-6 cursor-pointer"
         style={{ borderColor: "var(--rust)" }}
       >
         <span
-          className="text-[9px] font-bold tracking-tight"
+          className="text-[7px] sm:text-[9px] font-bold tracking-tight"
           style={{ fontFamily: "var(--font-display)", color: "var(--rust)" }}
         >
           SCHOOL
@@ -135,16 +136,16 @@ export default function MapApp({
 
       {/* stats chip */}
       <div
-        className="fixed top-4 right-4 z-10 bg-white/90 border rounded-full px-4 py-2 shadow-md text-xs font-mono flex gap-3"
+        className="fixed top-3 right-3 sm:top-4 sm:right-4 z-10 bg-white/90 border rounded-full px-2.5 py-1.5 sm:px-4 sm:py-2 shadow-md text-[9px] sm:text-xs font-mono flex gap-1.5 sm:gap-3 max-w-[62vw] sm:max-w-none"
         style={{ borderColor: "var(--line)" }}
       >
         <span style={{ color: "var(--brick)" }}>{stats.flagged} flagged</span>
-        <span style={{ color: "var(--rust)" }}>{stats.progress} in progress</span>
+        <span style={{ color: "var(--rust)" }} className="hidden xs:inline">{stats.progress} in progress</span>
         <span style={{ color: "var(--moss)" }}>{stats.resolved} resolved</span>
       </div>
 
       {/* legend */}
-      <div className="fixed bottom-5 left-4 z-10 flex flex-col items-start gap-2">
+      <div className="fixed bottom-4 left-3 sm:bottom-5 sm:left-4 z-10 flex flex-col items-start gap-2">
         {legendOpen && (
           <div
             className="bg-white border rounded-lg px-3 py-2.5 shadow-lg text-xs font-mono space-y-1.5"
@@ -174,10 +175,12 @@ export default function MapApp({
       {/* submit FAB */}
       <button
         onClick={() => setSubmitOpen(true)}
-        className="fixed bottom-5 right-5 z-10 rounded-full text-white h-13 px-5 flex items-center gap-2 shadow-lg cursor-pointer font-semibold text-sm"
+        className="fixed bottom-4 right-3 sm:bottom-5 sm:right-5 z-10 rounded-full text-white px-4 sm:px-5 flex items-center gap-2 shadow-lg cursor-pointer font-semibold text-sm"
         style={{ background: "var(--ink)", height: 52 }}
       >
-        <span className="text-lg leading-none">+</span> Submit a report
+        <span className="text-lg leading-none">+</span>
+        <span className="hidden xs:inline">Submit a report</span>
+        <span className="inline xs:hidden">Submit</span>
       </button>
 
       {/* scrim */}
@@ -193,7 +196,7 @@ export default function MapApp({
 
       {/* case drawer */}
       <div
-        className="fixed top-0 right-0 h-full w-[360px] max-w-[90vw] bg-white z-20 shadow-2xl transition-transform"
+        className="fixed top-0 right-0 h-full w-full sm:w-[380px] sm:max-w-[90vw] bg-white z-20 shadow-2xl transition-transform"
         style={{ transform: selected ? "translateX(0)" : "translateX(100%)" }}
       >
         {selected && (
@@ -235,15 +238,7 @@ export default function MapApp({
                 Source
               </h4>
               {selected.instagram_url ? (
-                <a
-                  href={selected.instagram_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm underline break-all"
-                  style={{ color: "var(--rust)" }}
-                >
-                  {selected.instagram_url}
-                </a>
+                <InstagramEmbed url={selected.instagram_url} />
               ) : (
                 <p className="text-sm" style={{ color: "var(--ink-soft)" }}>No link provided.</p>
               )}

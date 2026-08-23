@@ -18,6 +18,9 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@turf/bbox": "^7.4.0",
+    "@turf/boolean-point-in-polygon": "^7.4.0",
+    "@turf/point-on-feature": "^7.4.0",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
