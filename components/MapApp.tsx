@@ -348,9 +348,6 @@ export default function MapApp({
           This map turns that into an accountability record — what&apos;s been flagged, where, and
           whether it actually got fixed.
         </p>
-        <p className="mt-4 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
-          Built by <span style={{ fontFamily: "var(--font-accent)", fontStyle: "italic", color: "var(--moss)" }}>Cockroach Janta Party</span>.
-        </p>
       </div>
 
       <SubmitModal
