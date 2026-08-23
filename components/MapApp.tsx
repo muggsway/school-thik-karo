@@ -17,9 +17,8 @@ export type CaseRow = {
   map_x: number;
   map_y: number;
   created_at: string;
-  posted_at: string | null;
   village_name: string | null;
-  subdistrict_name: string;
+  subdistrict_name: string | null;
   district_name: string;
   state_name: string;
 };
@@ -89,11 +88,14 @@ export default function MapApp({
   const [submitOpen, setSubmitOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  const stats = useMemo(() => {
-    const flagged = cases.filter((c) => c.status === "flagged").length;
-    const progress = cases.filter((c) => c.status === "in_progress").length;
-    const resolved = cases.filter((c) => c.status === "resolved").length;
-    return { flagged, progress, resolved, total: cases.length };
+  const reach = useMemo(() => {
+    const districts = new Set(cases.map((c) => `${c.district_name}, ${c.state_name}`));
+    return {
+      schoolsAudited: cases.length,
+      districtsAudited: districts.size,
+      schoolsImpacted: 0,
+      districtsImpacted: 0,
+    };
   }, [cases]);
 
   const stateLabels = useMemo(
@@ -193,14 +195,15 @@ export default function MapApp({
         </span>
       </button>
 
-      {/* stats chip */}
+      {/* reach tracker */}
       <div
-        className="fixed top-3 right-3 sm:top-4 sm:right-4 z-10 bg-white/90 border rounded-full px-2.5 py-1.5 sm:px-4 sm:py-2 shadow-md text-[9px] sm:text-xs font-mono flex gap-1.5 sm:gap-3 max-w-[62vw] sm:max-w-none"
+        className="fixed top-3 right-3 sm:top-4 sm:right-4 z-10 bg-white/95 border rounded-lg px-3 py-2.5 shadow-md text-[10px] sm:text-xs font-mono grid grid-cols-2 gap-x-4 gap-y-1 max-w-[80vw] sm:max-w-none"
         style={{ borderColor: "var(--line)" }}
       >
-        <span style={{ color: "var(--brick)" }}>{stats.flagged} flagged</span>
-        <span style={{ color: "var(--rust)" }} className="hidden xs:inline">{stats.progress} in progress</span>
-        <span style={{ color: "var(--moss)" }}>{stats.resolved} resolved</span>
+        <div><span className="font-semibold">{reach.schoolsAudited}</span> schools audited</div>
+        <div><span className="font-semibold">{reach.schoolsImpacted}</span> schools impacted</div>
+        <div><span className="font-semibold">{reach.districtsAudited}</span> districts audited</div>
+        <div><span className="font-semibold">{reach.districtsImpacted}</span> districts impacted</div>
       </div>
 
       {/* legend */}
@@ -286,13 +289,22 @@ export default function MapApp({
                 className="text-xl mt-3"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                {selected.village_name ? cleanVillageName(selected.village_name) : selected.subdistrict_name}
+                {selected.village_name
+                  ? cleanVillageName(selected.village_name)
+                  : selected.subdistrict_name ?? selected.district_name}
               </h2>
               {selected.school_name && (
                 <p className="text-sm mt-0.5">{selected.school_name}</p>
               )}
               <p className="text-xs font-mono mt-1" style={{ color: "var(--ink-soft)" }}>
-                {selected.village_name && `${selected.subdistrict_name} · `}{selected.district_name}, {selected.state_name}
+                {(selected.village_name
+                  ? [selected.subdistrict_name, selected.district_name, selected.state_name]
+                  : selected.subdistrict_name
+                  ? [selected.district_name, selected.state_name]
+                  : [selected.state_name]
+                )
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
             <div className="pt-5 pb-5 px-2 border-b" style={{ borderColor: "var(--line)" }}>
@@ -318,11 +330,7 @@ export default function MapApp({
                 Timeline
               </h4>
               <div className="space-y-3">
-                <TimelineEntry
-                  date={selected.posted_at ?? selected.created_at}
-                  label={selected.posted_at ? "Posted on Instagram" : "Added to this map"}
-                />
-                {selected.posted_at && <TimelineEntry date={selected.created_at} label="Added to this map" />}
+                <TimelineEntry date={selected.created_at} label="Added to this map" />
               </div>
             </div>
           </div>

@@ -7,8 +7,8 @@ import { cleanVillageName } from "@/lib/format";
 export type PickedLocation = {
   villageCode: number | null;
   villageName: string | null;
-  subdistrictCode: number;
-  subdistrictName: string;
+  subdistrictCode: number | null;
+  subdistrictName: string | null;
   districtCode: number;
   districtName: string;
   stateCode: number;
@@ -16,10 +16,11 @@ export type PickedLocation = {
 };
 
 type SearchResult = {
-  village_code: number;
-  village_name: string;
-  subdistrict_code: number;
-  subdistrict_name: string;
+  level: "village" | "subdistrict" | "district";
+  village_code: number | null;
+  village_name: string | null;
+  subdistrict_code: number | null;
+  subdistrict_name: string | null;
   district_code: number;
   district_name: string;
   state_code: number;
@@ -32,6 +33,11 @@ async function fetchOptions(url: string): Promise<Option[]> {
   const res = await fetch(url);
   if (!res.ok) return [];
   return res.json();
+}
+
+function resultSubtitle(r: SearchResult): string {
+  const parts = [r.subdistrict_name, r.district_name].filter(Boolean);
+  return `${parts.join(" · ")}, ${r.state_name}`;
 }
 
 export default function VillagePicker({
@@ -152,18 +158,42 @@ export default function VillagePicker({
     });
   }
 
+  function useDistrictLevel() {
+    const district = districts.find((x) => String(x.code) === String(districtCode));
+    const state = states.find((x) => String(x.code) === String(stateCode));
+    if (!district || !state) return;
+    onChange({
+      villageCode: null,
+      villageName: null,
+      subdistrictCode: null,
+      subdistrictName: null,
+      districtCode: district.code,
+      districtName: district.name,
+      stateCode: state.code,
+      stateName: state.name,
+    });
+  }
+
   if (value) {
+    const label = value.villageName
+      ? cleanVillageName(value.villageName)
+      : value.subdistrictName ?? value.districtName;
+    // Whichever level is the headline label, the subtitle shows everything
+    // coarser than it (skip levels already spoken for by the headline).
+    const subtitleParts = value.villageName
+      ? [value.subdistrictName, value.districtName, value.stateName]
+      : value.subdistrictName
+      ? [value.districtName, value.stateName]
+      : [value.stateName];
     return (
       <div
         className="w-full mb-3 px-3 py-2.5 rounded-lg border bg-white text-sm flex items-center justify-between gap-2"
         style={{ borderColor: "var(--line)" }}
       >
         <div>
-          <div className="font-medium">
-            📍 {value.villageName ? cleanVillageName(value.villageName) : value.subdistrictName}
-          </div>
+          <div className="font-medium">📍 {label}</div>
           <div className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
-            {value.villageName && `${value.subdistrictName} · `}{value.districtName}, {value.stateName}
+            {subtitleParts.filter(Boolean).join(" · ")}
           </div>
         </div>
         <button
@@ -191,7 +221,7 @@ export default function VillagePicker({
             else setSearching(true);
           }}
           onFocus={() => setShowResults(true)}
-          placeholder="Search village name…"
+          placeholder="Search village, tehsil, or district/city…"
           className="w-full px-3 py-2.5 rounded-lg border bg-white text-sm"
           style={{ borderColor: "var(--line)" }}
         />
@@ -207,21 +237,28 @@ export default function VillagePicker({
             )}
             {!searching && results.length === 0 && (
               <div className="px-3 py-2.5 text-sm" style={{ color: "var(--ink-soft)" }}>
-                No villages found. Try a different spelling, or select manually below.
+                Nothing found. Try a different spelling, or select manually below.
               </div>
             )}
             {!searching &&
-              results.map((r) => (
+              results.map((r, i) => (
                 <button
                   type="button"
-                  key={r.village_code}
+                  key={`${r.level}-${r.village_code ?? r.subdistrict_code ?? r.district_code}-${i}`}
                   onClick={() => pick(r)}
                   className="w-full text-left px-3 py-2.5 hover:bg-[var(--paper-dim)] cursor-pointer border-b last:border-b-0"
                   style={{ borderColor: "var(--line)" }}
                 >
-                  <div className="text-sm font-medium">{cleanVillageName(r.village_name)}</div>
+                  <div className="text-sm font-medium">
+                    {r.village_name ? cleanVillageName(r.village_name) : r.subdistrict_name ?? r.district_name}
+                    {r.level !== "village" && (
+                      <span className="text-[10px] font-mono uppercase ml-1.5" style={{ color: "var(--ink-soft)" }}>
+                        {r.level}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs" style={{ color: "var(--ink-soft)" }}>
-                    {r.subdistrict_name} · {r.district_name}, {r.state_name}
+                    {resultSubtitle(r)}
                   </div>
                 </button>
               ))}
@@ -263,6 +300,16 @@ export default function VillagePicker({
               <option key={d.code} value={d.code}>{d.name}</option>
             ))}
           </select>
+          {districtCode && (
+            <button
+              type="button"
+              onClick={useDistrictLevel}
+              className="text-xs underline cursor-pointer block"
+              style={{ color: "var(--rust)" }}
+            >
+              Can&apos;t find the tehsil either? Tag this report to the district/city instead
+            </button>
+          )}
           <select
             disabled={!districtCode}
             value={subdistrictCode}

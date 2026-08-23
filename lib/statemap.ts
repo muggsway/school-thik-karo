@@ -54,26 +54,27 @@ export function stateLabelPosition(stateCode: number): { x: number; y: number } 
 }
 
 /**
- * Places a case pin. Prefers a real tehsil-level anchor point (from geoBoundaries,
- * reprojected into the map's SVG space via a per-state bounding-box transform),
- * falling back to a pseudo-random point within the state's shape when no tehsil
- * anchor was matched (~13% of tehsils, mostly ones with LGD/geoBoundaries name
- * mismatches — see scripts/match-geo.mjs).
+ * Places a case pin, preferring the most precise real anchor available:
+ * tehsil anchor (jittered around, if there's a specific village), then the
+ * tehsil anchor exactly (tehsil-only case), then the district anchor
+ * (district/city-only case, e.g. Kolkata, which has no LGD tehsils at all),
+ * finally a pseudo-random point within the state's shape if nothing matched.
+ * Anchors come from geoBoundaries, reprojected into the map's SVG space via
+ * a per-state bounding-box transform — see scripts/match-geo.mjs.
  */
 export function placeLocation(
   stateCode: number,
-  subdistrictCode: number,
+  districtCode: number,
+  subdistrictCode: number | null,
   villageCode: string | null
 ): { x: number; y: number } {
   const entry = STATE_MAP[String(stateCode)];
   if (!entry) return { x: 306, y: 348 };
   const [svgMinX, svgMinY, svgMaxX, svgMaxY] = entry.bbox;
 
-  const point = SUBDISTRICT_POINTS[String(subdistrictCode)];
-  const seed = villageCode ?? `tehsil:${subdistrictCode}`;
-
-  if (point) {
-    const svg = lonLatToSvg(stateCode, point.lon, point.lat);
+  const subPoint = subdistrictCode ? SUBDISTRICT_POINTS[String(subdistrictCode)] : undefined;
+  if (subPoint) {
+    const svg = lonLatToSvg(stateCode, subPoint.lon, subPoint.lat);
     if (svg) {
       // No specific village to jitter around: place tehsil-only cases exactly
       // at the tehsil's real anchor point instead of pretending to precision
@@ -83,10 +84,17 @@ export function placeLocation(
     }
   }
 
+  const distPoint = DISTRICT_POINTS[String(districtCode)];
+  if (distPoint) {
+    const svg = lonLatToSvg(stateCode, distPoint.lon, distPoint.lat);
+    if (svg) return svg;
+  }
+
+  const seed = villageCode ?? String(subdistrictCode ?? `district:${districtCode}`);
   const marginX = (svgMaxX - svgMinX) * 0.12;
   const marginY = (svgMaxY - svgMinY) * 0.12;
-  const rx = hash(subdistrictCode + seed + ":x");
-  const ry = hash(subdistrictCode + seed + ":y");
+  const rx = hash(districtCode + seed + ":x");
+  const ry = hash(districtCode + seed + ":y");
   return {
     x: svgMinX + marginX + rx * (svgMaxX - svgMinX - marginX * 2),
     y: svgMinY + marginY + ry * (svgMaxY - svgMinY - marginY * 2),
