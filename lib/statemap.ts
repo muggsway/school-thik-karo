@@ -1,5 +1,6 @@
 import stateMap from "@/data/state-map.json";
 import subdistrictPoints from "@/data/subdistrict-points.json";
+import districtPoints from "@/data/district-points.json";
 import stateRealBBox from "@/data/state-real-bbox.json";
 
 export type StateMapEntry = {
@@ -8,9 +9,12 @@ export type StateMapEntry = {
   bbox: [number, number, number, number];
 };
 
+export type GeoPoint = { name: string; lon: number; lat: number; stateCode: number };
+
 export const STATE_MAP = stateMap as unknown as Record<string, StateMapEntry>;
-const SUBDISTRICT_POINTS = subdistrictPoints as unknown as Record<string, [number, number]>;
-const STATE_REAL_BBOX = stateRealBBox as unknown as Record<string, [number, number, number, number]>;
+export const SUBDISTRICT_POINTS = subdistrictPoints as unknown as Record<string, GeoPoint>;
+export const DISTRICT_POINTS = districtPoints as unknown as Record<string, GeoPoint>;
+export const STATE_REAL_BBOX = stateRealBBox as unknown as Record<string, [number, number, number, number]>;
 
 function hash(str: string): number {
   let h = 2166136261;
@@ -25,6 +29,28 @@ function jitter(x: number, y: number, rangeX: number, rangeY: number, seed: stri
   const rx = hash(seed + ":x") - 0.5;
   const ry = hash(seed + ":y") - 0.5;
   return { x: x + rx * rangeX, y: y + ry * rangeY };
+}
+
+/** Reprojects a real lon/lat point into the map's SVG space via a per-state bounding-box transform. */
+export function lonLatToSvg(stateCode: number, lon: number, lat: number): { x: number; y: number } | null {
+  const entry = STATE_MAP[String(stateCode)];
+  const realBBox = STATE_REAL_BBOX[String(stateCode)];
+  if (!entry || !realBBox) return null;
+  const [svgMinX, svgMinY, svgMaxX, svgMaxY] = entry.bbox;
+  const [minLon, minLat, maxLon, maxLat] = realBBox;
+  const fracX = (lon - minLon) / (maxLon - minLon || 1);
+  const fracY = (lat - minLat) / (maxLat - minLat || 1);
+  return {
+    x: svgMinX + fracX * (svgMaxX - svgMinX),
+    y: svgMinY + (1 - fracY) * (svgMaxY - svgMinY),
+  };
+}
+
+export function stateLabelPosition(stateCode: number): { x: number; y: number } | null {
+  const entry = STATE_MAP[String(stateCode)];
+  if (!entry) return null;
+  const [minX, minY, maxX, maxY] = entry.bbox;
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
 }
 
 /**
@@ -44,16 +70,12 @@ export function placeLocation(
   const [svgMinX, svgMinY, svgMaxX, svgMaxY] = entry.bbox;
 
   const point = SUBDISTRICT_POINTS[String(subdistrictCode)];
-  const realBBox = STATE_REAL_BBOX[String(stateCode)];
 
-  if (point && realBBox) {
-    const [lon, lat] = point;
-    const [minLon, minLat, maxLon, maxLat] = realBBox;
-    const fracX = (lon - minLon) / (maxLon - minLon || 1);
-    const fracY = (lat - minLat) / (maxLat - minLat || 1);
-    const x = svgMinX + fracX * (svgMaxX - svgMinX);
-    const y = svgMinY + (1 - fracY) * (svgMaxY - svgMinY);
-    return jitter(x, y, (svgMaxX - svgMinX) * 0.012, (svgMaxY - svgMinY) * 0.012, villageCode);
+  if (point) {
+    const svg = lonLatToSvg(stateCode, point.lon, point.lat);
+    if (svg) {
+      return jitter(svg.x, svg.y, (svgMaxX - svgMinX) * 0.012, (svgMaxY - svgMinY) * 0.012, villageCode);
+    }
   }
 
   const marginX = (svgMaxX - svgMinX) * 0.12;

@@ -14,6 +14,7 @@
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-zoom-pan-pinch": "^4.0.4",
     "svg-path-bbox": "^2.1.0"
   },
   "devDependencies": {

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { schoolName, stateCode, districtCode, subdistrictCode, villageCode, instagramUrl, notes } = body;
 
-  if (!schoolName || !stateCode || !districtCode || !subdistrictCode || !villageCode) {
+  if (!instagramUrl || !stateCode || !districtCode || !subdistrictCode || !villageCode) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       (school_name, state_code, district_code, subdistrict_code, village_code, status, instagram_url, notes, map_x, map_y)
      VALUES ($1,$2,$3,$4,$5,'flagged',$6,$7,$8,$9)
      RETURNING id`,
-    [schoolName, stateCode, districtCode, subdistrictCode, villageCode, instagramUrl || null, notes || null, x, y]
+    [schoolName || null, stateCode, districtCode, subdistrictCode, villageCode, instagramUrl, notes || null, x, y]
   );
 
   return NextResponse.json({ id: rows[0].id }, { status: 201 });

@@ -37,8 +37,8 @@ export default function SubmitModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!schoolName || !location) {
-      setError("Please fill in the school name and pick a village.");
+    if (!instagramUrl || !location) {
+      setError("Please add the Instagram link and pick a village.");
       return;
     }
     setSubmitting(true);
@@ -47,7 +47,7 @@ export default function SubmitModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schoolName,
+          schoolName: schoolName || null,
           stateCode: location.stateCode,
           districtCode: location.districtCode,
           subdistrictCode: location.subdistrictCode,
@@ -63,7 +63,7 @@ export default function SubmitModal({
 
       onCreated({
         id,
-        school_name: schoolName,
+        school_name: schoolName || null,
         status: "flagged",
         instagram_url: instagramUrl || null,
         notes: notes || null,
@@ -111,10 +111,11 @@ export default function SubmitModal({
         </p>
 
         <label className="block text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-soft)" }}>
-          Instagram link (optional)
+          Instagram link
         </label>
         <input
           type="url"
+          required
           value={instagramUrl}
           onChange={(e) => setInstagramUrl(e.target.value)}
           placeholder="https://instagram.com/p/..."
@@ -123,22 +124,21 @@ export default function SubmitModal({
         />
 
         <label className="block text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-soft)" }}>
-          School name
+          Village
+        </label>
+        <VillagePicker states={states} value={location} onChange={setLocation} />
+
+        <label className="block text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-soft)" }}>
+          School name (optional)
         </label>
         <input
           type="text"
-          required
           value={schoolName}
           onChange={(e) => setSchoolName(e.target.value)}
           placeholder="e.g. Panchayat Primary School"
           className="w-full mb-3 px-3 py-2.5 rounded-lg border bg-white text-sm"
           style={{ borderColor: "var(--line)" }}
         />
-
-        <label className="block text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-soft)" }}>
-          Village
-        </label>
-        <VillagePicker states={states} value={location} onChange={setLocation} />
 
         <label className="block text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-soft)" }}>
           Notes (optional)

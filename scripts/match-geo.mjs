@@ -150,10 +150,20 @@ console.log(`ADM2 matched: ${adm2Matched}/${adm2.length}`);
 
 const matchedAdm2 = adm2.filter((f) => f._lgdDistrictCode != null);
 
+const districtByCode = new Map(lgdDistricts.map((d) => [d.code, d]));
+const subdistrictByCode = new Map(lgdSubdistricts.map((s) => [s.code, s]));
+
+const districtPoint = {}; // lgd district code -> { name, lon, lat, stateCode }
+for (const f of matchedAdm2) {
+  const d = districtByCode.get(f._lgdDistrictCode);
+  districtPoint[f._lgdDistrictCode] = { name: d.name, lon: f._point[0], lat: f._point[1], stateCode: d.state_code };
+}
+console.log(`Unique LGD districts with a point: ${Object.keys(districtPoint).length} / ${lgdDistricts.length}`);
+
 // --- Step 3: ADM3 (subdistrict) -> containing ADM2 district, then fuzzy match subdistrict name ---
 console.log("Matching ADM3 subdistricts...");
 let adm3Matched = 0;
-const subdistrictPoint = {}; // lgd subdistrict code -> [lon, lat]
+const subdistrictPoint = {}; // lgd subdistrict code -> { name, lon, lat }
 for (const f of adm3) {
   const pof = pointOnFeature(f);
   const pt = pof.geometry.coordinates;
@@ -163,7 +173,8 @@ for (const f of adm3) {
   const candidates = lgdSubdistricts.filter((s) => s.district_code === districtCode);
   const m = bestMatch(f.properties.shapeName, candidates);
   if (m && m.score > 0.5) {
-    subdistrictPoint[m.candidate.code] = pt;
+    const s = subdistrictByCode.get(m.candidate.code);
+    subdistrictPoint[m.candidate.code] = { name: s.name, lon: pt[0], lat: pt[1], stateCode: s.state_code };
     adm3Matched++;
   }
 }
@@ -171,5 +182,6 @@ console.log(`ADM3 matched: ${adm3Matched}/${adm3.length}`);
 console.log(`Unique LGD subdistricts with a point: ${Object.keys(subdistrictPoint).length} / ${lgdSubdistricts.length}`);
 
 fs.writeFileSync(`${APP}/data/subdistrict-points.json`, JSON.stringify(subdistrictPoint));
+fs.writeFileSync(`${APP}/data/district-points.json`, JSON.stringify(districtPoint));
 fs.writeFileSync(`${APP}/data/state-real-bbox.json`, JSON.stringify(stateRealBBox));
 console.log("Done.");

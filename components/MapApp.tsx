@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TransformWrapper, TransformComponent, useControls, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import indiaMap from "@svg-maps/india";
-import stateMapData from "@/data/state-map.json";
+import { STATE_MAP, DISTRICT_POINTS, SUBDISTRICT_POINTS, lonLatToSvg, stateLabelPosition } from "@/lib/statemap";
 import SubmitModal from "@/components/SubmitModal";
 import InstagramEmbed from "@/components/InstagramEmbed";
 
 export type CaseRow = {
   id: number;
-  school_name: string;
+  school_name: string | null;
   status: "flagged" | "in_progress" | "resolved";
   instagram_url: string | null;
   notes: string | null;
@@ -35,15 +36,38 @@ const STATUS_LABEL: Record<CaseRow["status"], string> = {
   resolved: "Resolved",
 };
 
-const stateMap = stateMapData as unknown as Record<
-  string,
-  { svgId: string; svgName: string; bbox: [number, number, number, number] }
->;
-const svgIdToLgdCodes = new Map<string, string[]>();
-for (const [code, entry] of Object.entries(stateMap)) {
-  const list = svgIdToLgdCodes.get(entry.svgId) ?? [];
-  list.push(code);
-  svgIdToLgdCodes.set(entry.svgId, list);
+function PinMarker({
+  x,
+  y,
+  color,
+  selected,
+  onClick,
+}: {
+  x: number;
+  y: number;
+  color: string;
+  selected: boolean;
+  onClick: (e: React.MouseEvent) => void;
+}) {
+  const s = selected ? 0.62 : 0.48;
+  const tx = x - 12 * s;
+  const ty = y - 22 * s;
+  return (
+    <g
+      onClick={onClick}
+      className="cursor-pointer"
+      style={{ transition: "transform 120ms" }}
+      transform={`translate(${tx} ${ty}) scale(${s})`}
+    >
+      <path
+        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+        fill={color}
+        stroke="var(--ink)"
+        strokeWidth={selected ? 1.1 : 0.7}
+      />
+      <circle cx="12" cy="9" r="3" fill="white" />
+    </g>
+  );
 }
 
 export default function MapApp({
@@ -58,6 +82,7 @@ export default function MapApp({
   const [legendOpen, setLegendOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
 
   const stats = useMemo(() => {
     const flagged = cases.filter((c) => c.status === "flagged").length;
@@ -66,6 +91,17 @@ export default function MapApp({
     return { flagged, progress, resolved, total: cases.length };
   }, [cases]);
 
+  const stateLabels = useMemo(
+    () =>
+      Object.keys(STATE_MAP)
+        .map((code) => {
+          const pos = stateLabelPosition(Number(code));
+          return pos ? { key: code, name: STATE_MAP[code].svgName, ...pos } : null;
+        })
+        .filter((l): l is { key: string; name: string; x: number; y: number } => l !== null),
+    []
+  );
+
   function handleCreated(newCase: CaseRow) {
     setCases((prev) => [newCase, ...prev]);
     setSubmitOpen(false);
@@ -73,48 +109,74 @@ export default function MapApp({
   }
 
   const anyPanelOpen = !!selected || legendOpen || submitOpen || aboutOpen;
+  const showStateLabels = zoomScale <= 3.2;
+  const showDistrictLabels = zoomScale > 3.2 && zoomScale <= 10;
+  const showTehsilLabels = zoomScale > 10;
 
   return (
     <div className="fixed inset-0 bg-[#f5f0e2]">
-      <svg
-        viewBox={indiaMap.viewBox}
-        className="w-full h-full block"
-        onClick={() => {
-          setSelected(null);
-          setAboutOpen(false);
-        }}
+      <TransformWrapper
+        initialScale={1}
+        minScale={1}
+        maxScale={18}
+        limitToBounds={true}
+        smooth={true}
+        doubleClick={{ mode: "zoomIn", step: 0.5, animationTime: 200 }}
+        wheel={{ step: 0.1 }}
+        pinch={{ step: 3 }}
+        onTransform={(_ref: ReactZoomPanPinchRef, state: { scale: number }) => setZoomScale(state.scale)}
       >
-        {indiaMap.locations.map((loc: { id: string; name: string; path: string }) => (
-          <path
-            key={loc.id}
-            d={loc.path}
-            fill="var(--paper)"
-            stroke="var(--line)"
-            strokeWidth={1}
-          />
-        ))}
-        {cases.map((c) => (
-          <g
-            key={c.id}
-            className="cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelected(c);
+        <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }} contentStyle={{ width: "100%", height: "100%" }}>
+          <svg
+            viewBox={indiaMap.viewBox}
+            className="w-full h-full block"
+            onClick={() => {
+              setSelected(null);
               setAboutOpen(false);
             }}
           >
-            <circle
-              cx={c.map_x}
-              cy={c.map_y}
-              r={selected?.id === c.id ? 6 : 4.5}
-              fill={STATUS_COLOR[c.status]}
-              stroke="var(--ink)"
-              strokeWidth={selected?.id === c.id ? 1.4 : 0}
-              opacity={0.92}
-            />
-          </g>
-        ))}
-      </svg>
+            {indiaMap.locations.map((loc: { id: string; name: string; path: string }) => (
+              <path key={loc.id} d={loc.path} fill="var(--paper)" stroke="var(--line)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            ))}
+
+            {showStateLabels &&
+              stateLabels.map((l) => (
+                <text
+                  key={`st-${l.key}`}
+                  x={l.x}
+                  y={l.y}
+                  textAnchor="middle"
+                  fontFamily="var(--font-body)"
+                  fontSize={9}
+                  fill="var(--ink-soft)"
+                  opacity={0.75}
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  {l.name}
+                </text>
+              ))}
+
+            {showDistrictLabels && <DistrictLabels zoomScale={zoomScale} />}
+            {showTehsilLabels && <TehsilLabels zoomScale={zoomScale} />}
+
+            {cases.map((c) => (
+              <PinMarker
+                key={c.id}
+                x={c.map_x}
+                y={c.map_y}
+                color={STATUS_COLOR[c.status]}
+                selected={selected?.id === c.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelected(c);
+                  setAboutOpen(false);
+                }}
+              />
+            ))}
+          </svg>
+        </TransformComponent>
+        <ZoomControls />
+      </TransformWrapper>
 
       {/* wordmark seal */}
       <button
@@ -227,10 +289,13 @@ export default function MapApp({
                 className="text-xl mt-3"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                {selected.school_name}
+                {selected.village_name}
               </h2>
+              {selected.school_name && (
+                <p className="text-sm mt-0.5">{selected.school_name}</p>
+              )}
               <p className="text-xs font-mono mt-1" style={{ color: "var(--ink-soft)" }}>
-                {selected.village_name} · {selected.subdistrict_name} · {selected.district_name}, {selected.state_name}
+                {selected.subdistrict_name} · {selected.district_name}, {selected.state_name}
               </p>
             </div>
             <div className="p-5 border-b" style={{ borderColor: "var(--line)" }}>
@@ -268,7 +333,7 @@ export default function MapApp({
 
       {/* about / campaign panel */}
       <div
-        className="fixed top-0 left-0 h-full w-[340px] max-w-[90vw] bg-white z-20 shadow-2xl transition-transform p-6"
+        className="fixed top-0 left-0 h-full w-full sm:w-[340px] sm:max-w-[90vw] bg-white z-20 shadow-2xl transition-transform p-6"
         style={{ transform: aboutOpen ? "translateX(0)" : "translateX(-100%)" }}
       >
         <button
@@ -300,6 +365,114 @@ export default function MapApp({
         states={states}
         onCreated={handleCreated}
       />
+    </div>
+  );
+}
+
+type LabelItem = { key: string; name: string; x: number; y: number };
+
+/** Greedily keeps at most one label per grid cell so labels never crowd each other. */
+function declutter(items: LabelItem[], cellSize: number): LabelItem[] {
+  const seen = new Set<string>();
+  const out: LabelItem[] = [];
+  for (const item of items) {
+    const cellKey = `${Math.round(item.x / cellSize)}:${Math.round(item.y / cellSize)}`;
+    if (seen.has(cellKey)) continue;
+    seen.add(cellKey);
+    out.push(item);
+  }
+  return out;
+}
+
+function DistrictLabels({ zoomScale }: { zoomScale: number }) {
+  const items = useMemo(() => {
+    const out: LabelItem[] = [];
+    for (const [code, p] of Object.entries(DISTRICT_POINTS)) {
+      const svg = lonLatToSvg(p.stateCode, p.lon, p.lat);
+      if (svg) out.push({ key: code, name: p.name, x: svg.x, y: svg.y });
+    }
+    return declutter(out, 26 / zoomScale);
+  }, [zoomScale]);
+
+  return (
+    <>
+      {items.map((l) => (
+        <text
+          key={`d-${l.key}`}
+          x={l.x}
+          y={l.y}
+          textAnchor="middle"
+          fontFamily="var(--font-body)"
+          fontSize={3}
+          fill="var(--ink-soft)"
+          opacity={0.85}
+          style={{ pointerEvents: "none", userSelect: "none" }}
+        >
+          {l.name}
+        </text>
+      ))}
+    </>
+  );
+}
+
+function TehsilLabels({ zoomScale }: { zoomScale: number }) {
+  const items = useMemo(() => {
+    const out: LabelItem[] = [];
+    for (const [code, p] of Object.entries(SUBDISTRICT_POINTS)) {
+      const svg = lonLatToSvg(p.stateCode, p.lon, p.lat);
+      if (svg) out.push({ key: code, name: p.name, x: svg.x, y: svg.y });
+    }
+    return declutter(out, 18 / zoomScale);
+  }, [zoomScale]);
+
+  return (
+    <>
+      {items.map((l) => (
+        <text
+          key={`t-${l.key}`}
+          x={l.x}
+          y={l.y}
+          textAnchor="middle"
+          fontFamily="var(--font-body)"
+          fontSize={1.6}
+          fill="var(--ink-soft)"
+          opacity={0.8}
+          style={{ pointerEvents: "none", userSelect: "none" }}
+        >
+          {l.name}
+        </text>
+      ))}
+    </>
+  );
+}
+
+function ZoomControls() {
+  const { zoomIn, zoomOut, resetTransform } = useControls();
+  return (
+    <div className="fixed top-1/2 right-3 sm:right-4 -translate-y-1/2 z-10 flex flex-col shadow-md rounded-lg overflow-hidden border" style={{ borderColor: "var(--line)" }}>
+      <button
+        onClick={() => zoomIn()}
+        className="w-9 h-9 sm:w-10 sm:h-10 bg-white flex items-center justify-center text-lg cursor-pointer border-b"
+        style={{ borderColor: "var(--line)" }}
+        aria-label="Zoom in"
+      >
+        +
+      </button>
+      <button
+        onClick={() => zoomOut()}
+        className="w-9 h-9 sm:w-10 sm:h-10 bg-white flex items-center justify-center text-lg cursor-pointer border-b"
+        style={{ borderColor: "var(--line)" }}
+        aria-label="Zoom out"
+      >
+        −
+      </button>
+      <button
+        onClick={() => resetTransform()}
+        className="w-9 h-9 sm:w-10 sm:h-10 bg-white flex items-center justify-center text-xs cursor-pointer"
+        aria-label="Reset zoom"
+      >
+        ⟲
+      </button>
     </div>
   );
 }
