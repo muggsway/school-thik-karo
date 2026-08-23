@@ -10,3 +10,15 @@ export function cleanVillageName(raw: string): string {
     .replace(/\s*\((?:\d+|ct|m\.?\s?cl\.?|nac|og|n\.?a\.?)\)\s*$/i, "")
     .trim();
 }
+
+/**
+ * Instagram's own share sheet sometimes hands out a link with `/reels/`
+ * (plural) instead of the `/reel/` permalink format their embed widget
+ * actually requires -- the embed silently renders nothing, no error, for
+ * a plural-path URL. Also strips stray leading/trailing whitespace, which
+ * has the same silent-failure effect (e.g. from a copy-paste that grabs a
+ * trailing space).
+ */
+export function normalizeInstagramUrl(raw: string): string {
+  return raw.trim().replace(/\/reels\//i, "/reel/");
+}

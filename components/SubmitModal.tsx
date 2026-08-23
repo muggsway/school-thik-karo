@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { placeLocation } from "@/lib/statemap";
+import { normalizeInstagramUrl } from "@/lib/format";
 import type { CaseRow, StateOption } from "@/components/MapApp";
 import VillagePicker, { type PickedLocation } from "@/components/VillagePicker";
 
@@ -41,6 +42,7 @@ export default function SubmitModal({
       setError("Please add the Instagram link and pick a location.");
       return;
     }
+    const cleanUrl = normalizeInstagramUrl(instagramUrl);
     setSubmitting(true);
     try {
       const res = await fetch("/api/cases", {
@@ -52,7 +54,7 @@ export default function SubmitModal({
           districtCode: location.districtCode,
           subdistrictCode: location.subdistrictCode,
           villageCode: location.villageCode,
-          instagramUrl: instagramUrl || null,
+          instagramUrl: cleanUrl,
           notes: notes || null,
         }),
       });
@@ -70,7 +72,7 @@ export default function SubmitModal({
         id,
         school_name: schoolName || null,
         status: "flagged",
-        instagram_url: instagramUrl || null,
+        instagram_url: cleanUrl,
         notes: notes || null,
         map_x: x,
         map_y: y,

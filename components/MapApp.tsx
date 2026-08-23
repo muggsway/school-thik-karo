@@ -84,7 +84,6 @@ export default function MapApp({
 }) {
   const [cases, setCases] = useState(initialCases);
   const [selected, setSelected] = useState<CaseRow | null>(null);
-  const [legendOpen, setLegendOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
@@ -115,7 +114,7 @@ export default function MapApp({
     setSelected(newCase);
   }
 
-  const anyPanelOpen = !!selected || legendOpen || submitOpen || aboutOpen;
+  const anyPanelOpen = !!selected || submitOpen || aboutOpen;
 
   return (
     <div className="fixed inset-0 bg-[#f5f0e2]">
@@ -206,33 +205,6 @@ export default function MapApp({
         <div><span className="font-semibold">{reach.districtsImpacted}</span> districts impacted</div>
       </div>
 
-      {/* legend */}
-      <div className="fixed bottom-4 left-3 sm:bottom-5 sm:left-4 z-10 flex flex-col items-start gap-2">
-        {legendOpen && (
-          <div
-            className="bg-white border rounded-lg px-3 py-2.5 shadow-lg text-xs font-mono space-y-1.5"
-            style={{ borderColor: "var(--line)" }}
-          >
-            {(Object.keys(STATUS_LABEL) as CaseRow["status"][]).map((s) => (
-              <div key={s} className="flex items-center gap-2">
-                <span
-                  className="w-2 h-2 rounded-full inline-block"
-                  style={{ background: STATUS_COLOR[s] }}
-                />
-                {STATUS_LABEL[s]}
-              </div>
-            ))}
-          </div>
-        )}
-        <button
-          onClick={() => setLegendOpen((o) => !o)}
-          className="w-11 h-11 rounded-full bg-white border shadow-md flex items-center justify-center cursor-pointer"
-          style={{ borderColor: "var(--line)" }}
-          aria-label="Legend"
-        >
-          🔑
-        </button>
-      </div>
 
       {/* submit FAB */}
       <button

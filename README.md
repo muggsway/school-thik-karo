@@ -23,7 +23,12 @@ location matching, representative data, gap reports, etc). What's real here:
   (`pg_trgm`) for typos/spelling variants when the exact search comes up empty; and
   **tehsil- and district-level results** for places with no LGD village children at all —
   Kolkata, for instance, is a fully urban district with zero LGD villages or tehsils under
-  it, so it only shows up via the district-level query. If multiple villages share a name
+  it, so it only shows up via the district-level query. Tehsil/district matching also has
+  its own relaxed fallback: a query like "kotla mubarakpur delhi" has no hope of an exact
+  match (that neighborhood isn't in the LGD directory at all — it's urban, not a rural
+  village), so if the strict all-words-must-match search comes up empty, it retries with
+  any-word-matches instead, ranked by how many words hit — "delhi" alone is enough to
+  surface Delhi's districts as something to manually narrow down from. If multiple villages share a name
   (surprisingly common — 748 are named exactly "Rampur"), results show full context so you
   pick the right one. Village names carry official LGD tags like "[rural]" or a
   disambiguation number — `lib/format.ts` strips those for display without touching real
@@ -58,10 +63,16 @@ location matching, representative data, gap reports, etc). What's real here:
   with a fallback "Open on Instagram" link if the embed can't load. Note: some posts
   require an Instagram login to actually play, even via the fallback link — that's an
   Instagram-side restriction on that specific content, not something this app controls.
+  Two silent-failure link formats are normalized before storage (`lib/format.ts`'s
+  `normalizeInstagramUrl()`, applied client- and server-side, plus defensively again at
+  render time): stray leading/trailing whitespace, and Instagram's own share sheet
+  sometimes handing out `/reels/` (plural) instead of the `/reel/` permalink format the
+  embed widget actually requires — either one makes the embed render nothing, with no
+  error surfaced anywhere.
 - **A real database.** Submissions persist via a Postgres backend (Neon).
 - **Phone-first.** The submit form is a bottom sheet on small screens, the case drawer
-  goes full-width, and header chrome (wordmark, tracker, legend, FAB, zoom controls) is
-  sized for touch.
+  goes full-width, and header chrome (wordmark, tracker, FAB, zoom controls) is sized for
+  touch.
 
 What's simplified for now:
 

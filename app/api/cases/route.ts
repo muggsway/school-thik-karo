@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { placeLocation } from "@/lib/statemap";
+import { normalizeInstagramUrl } from "@/lib/format";
 
 export async function GET() {
   const { rows } = await pool.query(`
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
   if (!instagramUrl || !stateCode || !districtCode) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+  const cleanUrl = normalizeInstagramUrl(String(instagramUrl));
 
   const { x, y } = placeLocation(
     Number(stateCode),
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
       (school_name, state_code, district_code, subdistrict_code, village_code, status, instagram_url, notes, map_x, map_y)
      VALUES ($1,$2,$3,$4,$5,'flagged',$6,$7,$8,$9)
      RETURNING id`,
-    [schoolName || null, stateCode, districtCode, subdistrictCode || null, villageCode || null, instagramUrl, notes || null, x, y]
+    [schoolName || null, stateCode, districtCode, subdistrictCode || null, villageCode || null, cleanUrl, notes || null, x, y]
   );
 
   return NextResponse.json({ id: rows[0].id }, { status: 201 });

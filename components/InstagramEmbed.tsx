@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { normalizeInstagramUrl } from "@/lib/format";
 
 declare global {
   interface Window {
@@ -8,7 +9,9 @@ declare global {
   }
 }
 
-export default function InstagramEmbed({ url }: { url: string }) {
+export default function InstagramEmbed({ url: rawUrl }: { url: string }) {
+  const url = normalizeInstagramUrl(rawUrl);
+
   useEffect(() => {
     function process() {
       window.instgrm?.Embeds.process();
