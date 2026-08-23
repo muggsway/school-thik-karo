@@ -7,11 +7,11 @@ async function getCases(): Promise<CaseRow[]> {
   const { rows } = await pool.query(`
     SELECT
       c.id, c.school_name, c.status, c.instagram_url, c.notes,
-      c.map_x, c.map_y, c.created_at,
+      c.map_x, c.map_y, c.created_at, c.posted_at,
       v.name AS village_name, s.name AS subdistrict_name,
       d.name AS district_name, st.name AS state_name
     FROM cases c
-    JOIN villages v ON v.code = c.village_code
+    LEFT JOIN villages v ON v.code = c.village_code
     JOIN subdistricts s ON s.code = c.subdistrict_code
     JOIN districts d ON d.code = c.district_code
     JOIN states st ON st.code = c.state_code

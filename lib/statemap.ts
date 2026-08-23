@@ -63,25 +63,30 @@ export function stateLabelPosition(stateCode: number): { x: number; y: number } 
 export function placeLocation(
   stateCode: number,
   subdistrictCode: number,
-  villageCode: string
+  villageCode: string | null
 ): { x: number; y: number } {
   const entry = STATE_MAP[String(stateCode)];
   if (!entry) return { x: 306, y: 348 };
   const [svgMinX, svgMinY, svgMaxX, svgMaxY] = entry.bbox;
 
   const point = SUBDISTRICT_POINTS[String(subdistrictCode)];
+  const seed = villageCode ?? `tehsil:${subdistrictCode}`;
 
   if (point) {
     const svg = lonLatToSvg(stateCode, point.lon, point.lat);
     if (svg) {
+      // No specific village to jitter around: place tehsil-only cases exactly
+      // at the tehsil's real anchor point instead of pretending to precision
+      // we don't have.
+      if (!villageCode) return svg;
       return jitter(svg.x, svg.y, (svgMaxX - svgMinX) * 0.012, (svgMaxY - svgMinY) * 0.012, villageCode);
     }
   }
 
   const marginX = (svgMaxX - svgMinX) * 0.12;
   const marginY = (svgMaxY - svgMinY) * 0.12;
-  const rx = hash(subdistrictCode + villageCode + ":x");
-  const ry = hash(subdistrictCode + villageCode + ":y");
+  const rx = hash(subdistrictCode + seed + ":x");
+  const ry = hash(subdistrictCode + seed + ":y");
   return {
     x: svgMinX + marginX + rx * (svgMaxX - svgMinX - marginX * 2),
     y: svgMinY + marginY + ry * (svgMaxY - svgMinY - marginY * 2),

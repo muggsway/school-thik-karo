@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { TransformWrapper, TransformComponent, useControls, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
+import { TransformWrapper, TransformComponent, useControls } from "react-zoom-pan-pinch";
 import indiaMap from "@svg-maps/india";
-import { STATE_MAP, DISTRICT_POINTS, SUBDISTRICT_POINTS, lonLatToSvg, stateLabelPosition } from "@/lib/statemap";
+import { STATE_MAP, stateLabelPosition } from "@/lib/statemap";
+import { cleanVillageName } from "@/lib/format";
 import SubmitModal from "@/components/SubmitModal";
 import InstagramEmbed from "@/components/InstagramEmbed";
 
@@ -16,7 +17,8 @@ export type CaseRow = {
   map_x: number;
   map_y: number;
   created_at: string;
-  village_name: string;
+  posted_at: string | null;
+  village_name: string | null;
   subdistrict_name: string;
   district_name: string;
   state_name: string;
@@ -82,7 +84,6 @@ export default function MapApp({
   const [legendOpen, setLegendOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [zoomScale, setZoomScale] = useState(1);
 
   const stats = useMemo(() => {
     const flagged = cases.filter((c) => c.status === "flagged").length;
@@ -109,9 +110,6 @@ export default function MapApp({
   }
 
   const anyPanelOpen = !!selected || legendOpen || submitOpen || aboutOpen;
-  const showStateLabels = zoomScale <= 3.2;
-  const showDistrictLabels = zoomScale > 3.2 && zoomScale <= 10;
-  const showTehsilLabels = zoomScale > 10;
 
   return (
     <div className="fixed inset-0 bg-[#f5f0e2]">
@@ -124,7 +122,6 @@ export default function MapApp({
         doubleClick={{ mode: "zoomIn", step: 0.5, animationTime: 200 }}
         wheel={{ step: 0.1 }}
         pinch={{ step: 3 }}
-        onTransform={(_ref: ReactZoomPanPinchRef, state: { scale: number }) => setZoomScale(state.scale)}
       >
         <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }} contentStyle={{ width: "100%", height: "100%" }}>
           <svg
@@ -139,25 +136,21 @@ export default function MapApp({
               <path key={loc.id} d={loc.path} fill="var(--paper)" stroke="var(--line)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
             ))}
 
-            {showStateLabels &&
-              stateLabels.map((l) => (
-                <text
-                  key={`st-${l.key}`}
-                  x={l.x}
-                  y={l.y}
-                  textAnchor="middle"
-                  fontFamily="var(--font-body)"
-                  fontSize={9}
-                  fill="var(--ink-soft)"
-                  opacity={0.75}
-                  style={{ pointerEvents: "none", userSelect: "none" }}
-                >
-                  {l.name}
-                </text>
-              ))}
-
-            {showDistrictLabels && <DistrictLabels zoomScale={zoomScale} />}
-            {showTehsilLabels && <TehsilLabels zoomScale={zoomScale} />}
+            {stateLabels.map((l) => (
+              <text
+                key={`st-${l.key}`}
+                x={l.x}
+                y={l.y}
+                textAnchor="middle"
+                fontFamily="var(--font-body)"
+                fontSize={9}
+                fill="var(--ink-soft)"
+                opacity={0.75}
+                style={{ pointerEvents: "none", userSelect: "none" }}
+              >
+                {l.name}
+              </text>
+            ))}
 
             {cases.map((c) => (
               <PinMarker
@@ -263,7 +256,7 @@ export default function MapApp({
       >
         {selected && (
           <div className="h-full overflow-y-auto">
-            <div className="p-5 border-b" style={{ borderColor: "var(--line)" }}>
+            <div className="p-5 border-b relative" style={{ borderColor: "var(--line)" }}>
               <button
                 className="absolute top-4 right-4 text-xl cursor-pointer"
                 onClick={() => setSelected(null)}
@@ -289,13 +282,13 @@ export default function MapApp({
                 className="text-xl mt-3"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                {selected.village_name}
+                {selected.village_name ? cleanVillageName(selected.village_name) : `${selected.subdistrict_name} (tehsil level)`}
               </h2>
               {selected.school_name && (
                 <p className="text-sm mt-0.5">{selected.school_name}</p>
               )}
               <p className="text-xs font-mono mt-1" style={{ color: "var(--ink-soft)" }}>
-                {selected.subdistrict_name} · {selected.district_name}, {selected.state_name}
+                {selected.village_name && `${selected.subdistrict_name} · `}{selected.district_name}, {selected.state_name}
               </p>
             </div>
             <div className="p-5 border-b" style={{ borderColor: "var(--line)" }}>
@@ -322,10 +315,18 @@ export default function MapApp({
               </h4>
               <div className="text-sm flex gap-2">
                 <span className="font-mono text-xs" style={{ color: "var(--ink-soft)" }}>
-                  {new Date(selected.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  {new Date(selected.posted_at ?? selected.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </span>
-                <span>Initial flag submitted</span>
+                <span>{selected.posted_at ? "Posted on Instagram" : "Added to this map"}</span>
               </div>
+              {selected.posted_at && (
+                <div className="text-sm flex gap-2 mt-1.5">
+                  <span className="font-mono text-xs" style={{ color: "var(--ink-soft)" }}>
+                    {new Date(selected.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
+                  <span>Added to this map</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -355,7 +356,7 @@ export default function MapApp({
           whether it actually got fixed.
         </p>
         <p className="mt-4 text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
-          A demo build for <span style={{ fontFamily: "var(--font-accent)", fontStyle: "italic", color: "var(--moss)" }}>Cockroach Janta Party</span>.
+          Built by <span style={{ fontFamily: "var(--font-accent)", fontStyle: "italic", color: "var(--moss)" }}>Cockroach Janta Party</span>.
         </p>
       </div>
 
@@ -366,83 +367,6 @@ export default function MapApp({
         onCreated={handleCreated}
       />
     </div>
-  );
-}
-
-type LabelItem = { key: string; name: string; x: number; y: number };
-
-/** Greedily keeps at most one label per grid cell so labels never crowd each other. */
-function declutter(items: LabelItem[], cellSize: number): LabelItem[] {
-  const seen = new Set<string>();
-  const out: LabelItem[] = [];
-  for (const item of items) {
-    const cellKey = `${Math.round(item.x / cellSize)}:${Math.round(item.y / cellSize)}`;
-    if (seen.has(cellKey)) continue;
-    seen.add(cellKey);
-    out.push(item);
-  }
-  return out;
-}
-
-function DistrictLabels({ zoomScale }: { zoomScale: number }) {
-  const items = useMemo(() => {
-    const out: LabelItem[] = [];
-    for (const [code, p] of Object.entries(DISTRICT_POINTS)) {
-      const svg = lonLatToSvg(p.stateCode, p.lon, p.lat);
-      if (svg) out.push({ key: code, name: p.name, x: svg.x, y: svg.y });
-    }
-    return declutter(out, 26 / zoomScale);
-  }, [zoomScale]);
-
-  return (
-    <>
-      {items.map((l) => (
-        <text
-          key={`d-${l.key}`}
-          x={l.x}
-          y={l.y}
-          textAnchor="middle"
-          fontFamily="var(--font-body)"
-          fontSize={3}
-          fill="var(--ink-soft)"
-          opacity={0.85}
-          style={{ pointerEvents: "none", userSelect: "none" }}
-        >
-          {l.name}
-        </text>
-      ))}
-    </>
-  );
-}
-
-function TehsilLabels({ zoomScale }: { zoomScale: number }) {
-  const items = useMemo(() => {
-    const out: LabelItem[] = [];
-    for (const [code, p] of Object.entries(SUBDISTRICT_POINTS)) {
-      const svg = lonLatToSvg(p.stateCode, p.lon, p.lat);
-      if (svg) out.push({ key: code, name: p.name, x: svg.x, y: svg.y });
-    }
-    return declutter(out, 18 / zoomScale);
-  }, [zoomScale]);
-
-  return (
-    <>
-      {items.map((l) => (
-        <text
-          key={`t-${l.key}`}
-          x={l.x}
-          y={l.y}
-          textAnchor="middle"
-          fontFamily="var(--font-body)"
-          fontSize={1.6}
-          fill="var(--ink-soft)"
-          opacity={0.8}
-          style={{ pointerEvents: "none", userSelect: "none" }}
-        >
-          {l.name}
-        </text>
-      ))}
-    </>
   );
 }
 

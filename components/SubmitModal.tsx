@@ -18,6 +18,7 @@ export default function SubmitModal({
 }) {
   const [schoolName, setSchoolName] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
+  const [postedAt, setPostedAt] = useState("");
   const [notes, setNotes] = useState("");
   const [location, setLocation] = useState<PickedLocation | null>(null);
 
@@ -27,6 +28,7 @@ export default function SubmitModal({
   function resetForm() {
     setSchoolName("");
     setInstagramUrl("");
+    setPostedAt("");
     setNotes("");
     setLocation(null);
     setError(null);
@@ -38,7 +40,7 @@ export default function SubmitModal({
     e.preventDefault();
     setError(null);
     if (!instagramUrl || !location) {
-      setError("Please add the Instagram link and pick a village.");
+      setError("Please add the Instagram link and pick a village or tehsil.");
       return;
     }
     setSubmitting(true);
@@ -54,12 +56,17 @@ export default function SubmitModal({
           villageCode: location.villageCode,
           instagramUrl: instagramUrl || null,
           notes: notes || null,
+          postedAt: postedAt || null,
         }),
       });
       if (!res.ok) throw new Error("Submission failed");
       const { id } = await res.json();
 
-      const { x, y } = placeLocation(location.stateCode, location.subdistrictCode, String(location.villageCode));
+      const { x, y } = placeLocation(
+        location.stateCode,
+        location.subdistrictCode,
+        location.villageCode !== null ? String(location.villageCode) : null
+      );
 
       onCreated({
         id,
@@ -70,6 +77,7 @@ export default function SubmitModal({
         map_x: x,
         map_y: y,
         created_at: new Date().toISOString(),
+        posted_at: postedAt || null,
         village_name: location.villageName,
         subdistrict_name: location.subdistrictName,
         district_name: location.districtName,
@@ -119,6 +127,18 @@ export default function SubmitModal({
           value={instagramUrl}
           onChange={(e) => setInstagramUrl(e.target.value)}
           placeholder="https://instagram.com/p/..."
+          className="w-full mb-3 px-3 py-2.5 rounded-lg border bg-white text-sm"
+          style={{ borderColor: "var(--line)" }}
+        />
+
+        <label className="block text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-soft)" }}>
+          Date posted on Instagram (optional)
+        </label>
+        <input
+          type="date"
+          value={postedAt}
+          max={new Date().toISOString().slice(0, 10)}
+          onChange={(e) => setPostedAt(e.target.value)}
           className="w-full mb-3 px-3 py-2.5 rounded-lg border bg-white text-sm"
           style={{ borderColor: "var(--line)" }}
         />

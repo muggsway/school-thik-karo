@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { StateOption } from "@/components/MapApp";
+import { cleanVillageName } from "@/lib/format";
 
 export type PickedLocation = {
-  villageCode: number;
-  villageName: string;
+  villageCode: number | null;
+  villageName: string | null;
   subdistrictCode: number;
   subdistrictName: string;
   districtCode: number;
@@ -134,6 +135,23 @@ export default function VillagePicker({
     });
   }
 
+  function useTehsilLevel() {
+    const subdistrict = subdistricts.find((x) => String(x.code) === String(subdistrictCode));
+    const district = districts.find((x) => String(x.code) === String(districtCode));
+    const state = states.find((x) => String(x.code) === String(stateCode));
+    if (!subdistrict || !district || !state) return;
+    onChange({
+      villageCode: null,
+      villageName: null,
+      subdistrictCode: subdistrict.code,
+      subdistrictName: subdistrict.name,
+      districtCode: district.code,
+      districtName: district.name,
+      stateCode: state.code,
+      stateName: state.name,
+    });
+  }
+
   if (value) {
     return (
       <div
@@ -141,9 +159,11 @@ export default function VillagePicker({
         style={{ borderColor: "var(--line)" }}
       >
         <div>
-          <div className="font-medium">📍 {value.villageName}</div>
+          <div className="font-medium">
+            📍 {value.villageName ? cleanVillageName(value.villageName) : `${value.subdistrictName} (tehsil level)`}
+          </div>
           <div className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
-            {value.subdistrictName} · {value.districtName}, {value.stateName}
+            {value.villageName && `${value.subdistrictName} · `}{value.districtName}, {value.stateName}
           </div>
         </div>
         <button
@@ -199,7 +219,7 @@ export default function VillagePicker({
                   className="w-full text-left px-3 py-2.5 hover:bg-[var(--paper-dim)] cursor-pointer border-b last:border-b-0"
                   style={{ borderColor: "var(--line)" }}
                 >
-                  <div className="text-sm font-medium">{r.village_name}</div>
+                  <div className="text-sm font-medium">{cleanVillageName(r.village_name)}</div>
                   <div className="text-xs" style={{ color: "var(--ink-soft)" }}>
                     {r.subdistrict_name} · {r.district_name}, {r.state_name}
                   </div>
@@ -267,6 +287,16 @@ export default function VillagePicker({
               <option key={v.code} value={v.code}>{v.name}</option>
             ))}
           </select>
+          {subdistrictCode && (
+            <button
+              type="button"
+              onClick={useTehsilLevel}
+              className="text-xs underline cursor-pointer"
+              style={{ color: "var(--rust)" }}
+            >
+              Can&apos;t find the village? Tag this report to the tehsil instead
+            </button>
+          )}
         </div>
       )}
     </div>
